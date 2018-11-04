@@ -33,11 +33,11 @@ public:
     SoftShadow() 
     {
         m_pGameCamera = NULL;
-        m_scale = 0.0f;
+        m_scale = 0.0f; m_scale1 = 0.0f;
         m_directionalLight.Color = Vector3f(1.0f, 1.0f, 1.0f);
         m_directionalLight.AmbientIntensity = 0.55f;
         m_directionalLight.DiffuseIntensity = 0.9f;
-        m_directionalLight.Direction = Vector3f(1.0f, 1.0f, 0.0);
+        m_directionalLight.Direction = Vector3f(1.0f, 1.0f, 1.0f);
 
         m_persProjInfo.FOV = 60.0f;
         m_persProjInfo.Height = WINDOW_HEIGHT;
@@ -47,9 +47,11 @@ public:
         
        // m_boxPos = Vector3f(0.0f, 2.0f, 4.0f);
 		//m_boxPos = Vector3f(0.0f, 2.0f, 0.0);
-		m_meshOrientation.m_pos = Vector3f(0.0f, 2.0f, 4.0f);
+		m_meshOrientation.m_pos = Vector3f(8.0f, 2.0f, -2.0f);
 		m_quadOrientation.m_scale = Vector3f(10.0f, 10.0f, 10.0f);
 		m_quadOrientation.m_rotation = Vector3f(90.0f, 0.0f, 0.0f);
+
+		m_meshOrientation1.m_pos = Vector3f(1.0f, 2.0f, -2.0f);
     }
 
     ~SoftShadow()
@@ -86,6 +88,11 @@ public:
             printf("Mesh load failed\n");
             return false;            
         }
+
+		if (!m_mesh1.LoadMesh("../Content/prism.obj", true)) {
+			printf("Mesh load failed\n");
+			return false;
+		}
         
 #ifndef WIN32
         if (!m_fontRenderer.InitFontRenderer()) {
@@ -112,13 +119,15 @@ public:
     {   
         CalcFPS();
         
-        m_scale += 0.01f;
+        m_scale += 0.05f;
+		m_scale1 += 0.01f;
                
         m_pGameCamera->OnRender();
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
                       
         RenderScene();
+		RenderScene1();
 		RenderBasePlane();
         RenderFPS();
         
@@ -174,6 +183,32 @@ private:
         m_mesh.Render();        
     } 
 
+	void RenderScene1()
+	{
+		// Render the object as-is
+		m_LightingTech.Enable();
+
+		Pipeline p;
+		p.SetPerspectiveProj(m_persProjInfo);
+		p.SetCamera(m_pGameCamera->GetPos(), m_pGameCamera->GetTarget(), m_pGameCamera->GetUp());
+		//p.WorldPos(m_pos);
+		m_meshOrientation1.m_rotation = Vector3f(0, m_scale1, 0);
+		p.Orient(m_meshOrientation1);
+		m_LightingTech.SetWorldMatrix(p.GetWorldTrans());
+		m_LightingTech.SetWVP(p.GetWVPTrans());
+		m_mesh1.Render();
+
+		// Render the object's silhouette
+		m_silhouetteTech.Enable();
+
+		m_silhouetteTech.SetWorldMatrix(p.GetWorldTrans());
+		m_silhouetteTech.SetWVP(p.GetWVPTrans());
+		m_silhouetteTech.SetLightPos(Vector3f(10.0f, 20.0f, 0.0f));
+
+		glLineWidth(5.0f);
+
+		m_mesh1.Render();
+	}
 
 	void RenderBasePlane()
 	{
@@ -196,11 +231,15 @@ private:
     SilhouetteTechnique m_silhouetteTech;
     Camera* m_pGameCamera;
     float m_scale;
+	float m_scale1;
     DirectionalLight m_directionalLight;
 
 	Mesh m_mesh;
 	//Vector3f m_boxPos;
 	Orientation m_meshOrientation;
+	// Cube two 
+	Mesh m_mesh1;
+	Orientation m_meshOrientation1;
 
 	Mesh m_quad;
 	Texture* m_pGroundTex;
